@@ -22,8 +22,8 @@ namespace Config {
     
     // ========== UI配置 ==========
     namespace UI {
-        constexpr float FontScale = 1.3f;
-        constexpr int MenuWidth = 380;
-        constexpr int MenuHeight = 280;
+        constexpr float FontScale = 1.0f;
+        constexpr int MenuWidth = 480;
+        constexpr int MenuHeight = 320;
     }
 }

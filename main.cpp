@@ -7,6 +7,10 @@
 #include "Core/GameData.h"
 #include "UI/Renderer.h"
 
+#ifndef ENABLE_MENU_MOUSE_ISOLATION
+#define ENABLE_MENU_MOUSE_ISOLATION 1
+#endif
+
 // 全局变量定义
 char dlldir[320];
 
@@ -20,6 +24,9 @@ Present12 oPresent = NULL;
 
 typedef void(APIENTRY* ExecuteCommandLists)(ID3D12CommandQueue* queue, UINT NumCommandLists, ID3D12CommandList* ppCommandLists);
 ExecuteCommandLists oExecuteCommandLists = NULL;
+
+typedef HRESULT(APIENTRY* ResizeBuffers12)(IDXGISwapChain* pSwapChain, UINT BufferCount, UINT Width, UINT Height, DXGI_FORMAT NewFormat, UINT SwapChainFlags);
+ResizeBuffers12 oResizeBuffers = NULL;
 
 //=========================================================================================================================//
 
@@ -61,10 +68,28 @@ namespace DirectX12Interface {
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (ShowMenu) {
-		// 让ImGui处理消息，但不拦截游戏操作
-		ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam);
+		if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam)) {
+			return TRUE;
+		}
+
+#if ENABLE_MENU_MOUSE_ISOLATION
+		switch (uMsg) {
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_LBUTTONDBLCLK:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_RBUTTONDBLCLK:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_MBUTTONDBLCLK:
+		case WM_MOUSEMOVE:
+		case WM_MOUSEWHEEL:
+		case WM_MOUSEHWHEEL:
+			return TRUE;
+		}
+#endif
 	}
-	// 总是传递给游戏，不隔离操作
 	return CallWindowProc(Process::WndProc, hwnd, uMsg, wParam, lParam);
 }
 
@@ -83,7 +108,7 @@ HRESULT APIENTRY hkPresent(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT 
 			io.IniFilename = nullptr; // 禁用 ini 文件
 
 			// 加载中文字体
-			io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\msyh.ttc", 18.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
+			io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\msyh.ttc", 22.0f, NULL, io.Fonts->GetGlyphRangesChineseFull());
 
 			DXGI_SWAP_CHAIN_DESC Desc;
 			pSwapChain->GetDesc(&Desc);
@@ -102,15 +127,14 @@ HRESULT APIENTRY hkPresent(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT 
 			if (DirectX12Interface::Device->CreateDescriptorHeap(&DescriptorImGuiRender, IID_PPV_ARGS(&DirectX12Interface::DescriptorHeapImGuiRender)) != S_OK)
 				return oPresent(pSwapChain, SyncInterval, Flags);
 
-			ID3D12CommandAllocator* Allocator;
-			if (DirectX12Interface::Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&Allocator)) != S_OK)
-				return oPresent(pSwapChain, SyncInterval, Flags);
-
 			for (size_t i = 0; i < DirectX12Interface::BuffersCounts; i++) {
-				DirectX12Interface::FrameContext[i].CommandAllocator = Allocator;
+				ID3D12CommandAllocator* allocator = nullptr;
+				if (DirectX12Interface::Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)) != S_OK)
+					return oPresent(pSwapChain, SyncInterval, Flags);
+				DirectX12Interface::FrameContext[i].CommandAllocator = allocator;
 			}
 
-			if (DirectX12Interface::Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, Allocator, NULL, IID_PPV_ARGS(&DirectX12Interface::CommandList)) != S_OK ||
+			if (DirectX12Interface::Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, DirectX12Interface::FrameContext[0].CommandAllocator, NULL, IID_PPV_ARGS(&DirectX12Interface::CommandList)) != S_OK ||
 				DirectX12Interface::CommandList->Close() != S_OK)
 				return oPresent(pSwapChain, SyncInterval, Flags);
 
@@ -139,7 +163,9 @@ HRESULT APIENTRY hkPresent(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT 
 			ImGui_ImplDX12_Init(DirectX12Interface::Device, DirectX12Interface::BuffersCounts, DXGI_FORMAT_R8G8B8A8_UNORM, DirectX12Interface::DescriptorHeapImGuiRender, DirectX12Interface::DescriptorHeapImGuiRender->GetCPUDescriptorHandleForHeapStart(), DirectX12Interface::DescriptorHeapImGuiRender->GetGPUDescriptorHandleForHeapStart());
 			ImGui_ImplDX12_CreateDeviceObjects();
 			ImGui::GetIO().ImeWindowHandle = Process::Hwnd;
-			Process::WndProc = (WNDPROC)SetWindowLongPtr(Process::Hwnd, GWLP_WNDPROC, (__int3264)(LONG_PTR)WndProc);
+			if (!Process::WndProc) {
+				Process::WndProc = (WNDPROC)SetWindowLongPtr(Process::Hwnd, GWLP_WNDPROC, (__int3264)(LONG_PTR)WndProc);
+			}
 			
 			// 使用模块化的UI初始化
 			UI::Renderer::Initialize();
@@ -167,18 +193,23 @@ HRESULT APIENTRY hkPresent(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT 
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 	
-	// 完全禁用 ImGui 的鼠标和键盘捕获，防止游戏内鼠标闪烁
 	ImGuiIO& io = ImGui::GetIO();
-	io.MouseDrawCursor = false;
-	io.WantCaptureMouse = false;
-	io.WantCaptureKeyboard = false;
+	io.MouseDrawCursor = ShowMenu;
+	
+	if (ShowMenu) {
+		#if ENABLE_MENU_MOUSE_ISOLATION
+		ImDrawList* bg = ImGui::GetBackgroundDrawList();
+		ImVec2 displaySize = io.DisplaySize;
+		bg->AddRectFilled(ImVec2(0.0f, 0.0f), ImVec2(displaySize.x, displaySize.y), IM_COL32(0, 0, 0, 120));
+		#endif
+	}
 	
 	// 使用模块化渲染
 	if (ShowMenu && g_DataCollector) {
 		UI::Renderer::RenderMenu(g_DataCollector);
 	}
 	
-	if (g_DataCollector) {
+	if (!ShowMenu && g_DataCollector) {
 		UI::Renderer::RenderESP(g_DataCollector);
 	}
 	
@@ -209,6 +240,50 @@ HRESULT APIENTRY hkPresent(IDXGISwapChain3* pSwapChain, UINT SyncInterval, UINT 
 	DirectX12Interface::CommandList->Close();
 	DirectX12Interface::CommandQueue->ExecuteCommandLists(1, reinterpret_cast<ID3D12CommandList* const*>(&DirectX12Interface::CommandList));
 	return oPresent(pSwapChain, SyncInterval, Flags);
+}
+
+//=========================================================================================================================//
+
+HRESULT APIENTRY hkResizeBuffers(IDXGISwapChain* pSwapChain, UINT BufferCount, UINT Width, UINT Height, DXGI_FORMAT NewFormat, UINT SwapChainFlags) {
+	if (ImGui_Initialised) {
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+		ImGui::DestroyContext();
+		ImGui_Initialised = false;
+	}
+
+	if (DirectX12Interface::FrameContext) {
+		for (uintx_t i = 0; i < DirectX12Interface::BuffersCounts; ++i) {
+			DirectX12Interface::_FrameContext& context = DirectX12Interface::FrameContext[i];
+			if (context.Resource) {
+				context.Resource->Release();
+				context.Resource = nullptr;
+			}
+			if (context.CommandAllocator) {
+				context.CommandAllocator->Release();
+				context.CommandAllocator = nullptr;
+			}
+		}
+		delete[] DirectX12Interface::FrameContext;
+		DirectX12Interface::FrameContext = nullptr;
+	}
+
+	if (DirectX12Interface::DescriptorHeapBackBuffers) {
+		DirectX12Interface::DescriptorHeapBackBuffers->Release();
+		DirectX12Interface::DescriptorHeapBackBuffers = nullptr;
+	}
+	if (DirectX12Interface::DescriptorHeapImGuiRender) {
+		DirectX12Interface::DescriptorHeapImGuiRender->Release();
+		DirectX12Interface::DescriptorHeapImGuiRender = nullptr;
+	}
+	if (DirectX12Interface::CommandList) {
+		DirectX12Interface::CommandList->Release();
+		DirectX12Interface::CommandList = nullptr;
+	}
+
+	DirectX12Interface::BuffersCounts = 0;
+
+	return oResizeBuffers(pSwapChain, BufferCount, Width, Height, NewFormat, SwapChainFlags);
 }
 
 //=========================================================================================================================//
@@ -252,6 +327,7 @@ DWORD WINAPI MainThread(LPVOID lpParameter) {
 
 			WindowFocus = true;
 		}
+		Sleep(50);
 	}
 	
 	// 创建并启动数据收集器
@@ -265,7 +341,11 @@ DWORD WINAPI MainThread(LPVOID lpParameter) {
 			// 安装 Hook
 			Hook::HookManager::Instance().InstallHook(54, (void**)&oExecuteCommandLists, hkExecuteCommandLists);
 			Hook::HookManager::Instance().InstallHook(140, (void**)&oPresent, hkPresent);
+			Hook::HookManager::Instance().InstallHook(145, (void**)&oResizeBuffers, hkResizeBuffers);
 			InitHook = true;
+		}
+		else {
+			Sleep(100);
 		}
 	}
 	return 0;
@@ -286,9 +366,46 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved) {
 		if (g_DataCollector) {
 			g_DataCollector->StopCollection();
 			delete g_DataCollector;
+			g_DataCollector = nullptr;
+		}
+		if (ImGui_Initialised) {
+			ImGui_ImplDX12_Shutdown();
+			ImGui_ImplWin32_Shutdown();
+			ImGui::DestroyContext();
+			ImGui_Initialised = false;
+		}
+		if (Process::Hwnd && Process::WndProc) {
+			SetWindowLongPtr(Process::Hwnd, GWLP_WNDPROC, (__int3264)(LONG_PTR)Process::WndProc);
+			Process::WndProc = nullptr;
+		}
+		if (DirectX12Interface::FrameContext) {
+			for (uintx_t i = 0; i < DirectX12Interface::BuffersCounts; ++i) {
+				DirectX12Interface::_FrameContext& context = DirectX12Interface::FrameContext[i];
+				if (context.Resource) {
+					context.Resource->Release();
+					context.Resource = nullptr;
+				}
+				if (context.CommandAllocator) {
+					context.CommandAllocator->Release();
+					context.CommandAllocator = nullptr;
+				}
+			}
+			delete[] DirectX12Interface::FrameContext;
+			DirectX12Interface::FrameContext = nullptr;
+		}
+		if (DirectX12Interface::DescriptorHeapBackBuffers) {
+			DirectX12Interface::DescriptorHeapBackBuffers->Release();
+			DirectX12Interface::DescriptorHeapBackBuffers = nullptr;
+		}
+		if (DirectX12Interface::DescriptorHeapImGuiRender) {
+			DirectX12Interface::DescriptorHeapImGuiRender->Release();
+			DirectX12Interface::DescriptorHeapImGuiRender = nullptr;
+		}
+		if (DirectX12Interface::CommandList) {
+			DirectX12Interface::CommandList->Release();
+			DirectX12Interface::CommandList = nullptr;
 		}
 		Hook::HookManager::Instance().UninstallAll();
-		FreeLibraryAndExitThread(hModule, TRUE);
 		break;
 	case DLL_THREAD_ATTACH:
 		break;

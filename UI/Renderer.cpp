@@ -12,34 +12,34 @@ namespace UI {
         ImVec4* colors = style.Colors;
         
         // 锐角边框（圆角设为0）+ 间距
-        style.WindowRounding = 0.0f;
-        style.FrameRounding = 0.0f;
-        style.GrabRounding = 0.0f;
-        style.ChildRounding = 0.0f;
-        style.PopupRounding = 0.0f;
-        style.ScrollbarRounding = 0.0f;
-        style.WindowPadding = ImVec2(15, 15);
-        style.FramePadding = ImVec2(8, 4);
-        style.ItemSpacing = ImVec2(10, 8);
+        style.WindowRounding = 6.0f;
+        style.FrameRounding = 4.0f;
+        style.GrabRounding = 4.0f;
+        style.ChildRounding = 4.0f;
+        style.PopupRounding = 4.0f;
+        style.ScrollbarRounding = 4.0f;
+        style.WindowPadding = ImVec2(18, 16);
+        style.FramePadding = ImVec2(10, 6);
+        style.ItemSpacing = ImVec2(12, 10);
         
         // 高透明度主题（alpha降低）
-        colors[ImGuiCol_Text]                   = ImVec4(0.00f, 1.00f, 1.00f, 1.00f);
-        colors[ImGuiCol_TextDisabled]           = ImVec4(0.40f, 0.70f, 0.70f, 0.80f);
-        colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.14f, 0.70f);  // 0.95 → 0.70 更透明
-        colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.80f, 0.80f, 0.60f);
-        colors[ImGuiCol_FrameBg]                = ImVec4(0.15f, 0.15f, 0.20f, 0.60f);  // 0.80 → 0.60
-        colors[ImGuiCol_TitleBg]                = ImVec4(0.12f, 0.12f, 0.16f, 0.80f);  // 1.00 → 0.80
-        colors[ImGuiCol_TitleBgActive]          = ImVec4(0.15f, 0.15f, 0.20f, 0.85f);  // 1.00 → 0.85
-        colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.10f, 0.10f, 0.14f, 0.70f);
-        colors[ImGuiCol_CheckMark]              = ImVec4(0.00f, 1.00f, 0.50f, 1.00f);
-        colors[ImGuiCol_Button]                 = ImVec4(1.00f, 0.00f, 0.50f, 0.60f);  // 0.70 → 0.60
-        colors[ImGuiCol_ButtonHovered]          = ImVec4(1.00f, 0.20f, 0.60f, 0.80f);
-        colors[ImGuiCol_ButtonActive]           = ImVec4(1.00f, 0.40f, 0.70f, 1.00f);
-        colors[ImGuiCol_Separator]              = ImVec4(0.00f, 0.70f, 0.70f, 0.50f);
+        colors[ImGuiCol_Text]                   = ImVec4(0.95f, 0.96f, 0.98f, 1.00f);
+        colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.55f, 0.60f, 1.00f);
+        colors[ImGuiCol_WindowBg]               = ImVec4(0.08f, 0.09f, 0.12f, 0.95f);
+        colors[ImGuiCol_Border]                 = ImVec4(0.18f, 0.22f, 0.30f, 1.00f);
+        colors[ImGuiCol_FrameBg]                = ImVec4(0.18f, 0.20f, 0.26f, 1.00f);
+        colors[ImGuiCol_TitleBg]                = ImVec4(0.10f, 0.11f, 0.15f, 1.00f);
+        colors[ImGuiCol_TitleBgActive]          = ImVec4(0.14f, 0.15f, 0.20f, 1.00f);
+        colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.10f, 0.11f, 0.15f, 1.00f);
+        colors[ImGuiCol_CheckMark]              = ImVec4(0.20f, 0.80f, 0.60f, 1.00f);
+        colors[ImGuiCol_Button]                 = ImVec4(0.20f, 0.50f, 0.90f, 0.80f);
+        colors[ImGuiCol_ButtonHovered]          = ImVec4(0.26f, 0.60f, 0.98f, 0.90f);
+        colors[ImGuiCol_ButtonActive]           = ImVec4(0.16f, 0.48f, 0.85f, 1.00f);
+        colors[ImGuiCol_Separator]              = ImVec4(0.23f, 0.27f, 0.36f, 1.00f);
         
         // 字体缩放
         ImGui::GetIO().FontGlobalScale = Config::UI::FontScale;
-        ImGui::GetIO().FontAllowUserScaling = true;
+        ImGui::GetIO().FontAllowUserScaling = false;
     }
     
     void Renderer::RenderMenu(GameData::DataCollector* dataCollector) {

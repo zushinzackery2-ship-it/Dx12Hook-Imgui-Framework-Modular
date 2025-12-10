@@ -67,13 +67,6 @@ namespace GameData {
         auto PlayerPawn = PlayerController->Pawn;
         if (!PlayerPawn) return;
         
-        // 加速功能
-        if (Config::Features::SpeedBoost_Enabled) {
-            WriteFloat((DWORD64)PlayerPawn + Config::Offsets::PlayerSpeedOffset, 2.0f);
-        } else {
-            WriteFloat((DWORD64)PlayerPawn + Config::Offsets::PlayerSpeedOffset, 1.0f);
-        }
-        
         // 获取关卡中的所有Actor
         auto Level = GWorld->PersistentLevel;
         if (!Level) return;
