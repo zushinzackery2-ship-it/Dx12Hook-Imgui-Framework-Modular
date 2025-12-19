@@ -1,24 +1,92 @@
-# D3D12 Game Hook Framework
+<div align="center">
 
-License: MIT (见仓库根目录 `LICENSE`)
+# D3D12 Game Hook Framework
 
 **通用 D3D12 Hook 框架 + UE 游戏功能实现**
 
-采用模块化设计的 DirectX 12 Hook 框架，Hook 层通用于所有 D3D12 游戏，游戏功能专为 Unreal Engine 游戏优化。
+*跨游戏兼容 | 模块化设计 | 支持 UE4/UE5*
 
-## 重要法律/风险声明（请在使用前阅读）
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue?style=flat-square)
+![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
-- 本项目仅供安全研究与学习使用。请勿将本项目用于在线或多人游戏的作弊、入侵或其他违法活动。作者对任何滥用行为导致的后果不承担责任。
+</div>
 
-## ✨ 特性
+---
 
-- 🎯 **通用 D3D12 Hook** - Hook 模块适用于所有 D3D12 游戏
-- 🎮 **UE 游戏支持** - 使用 DUMPER-7 生成的 CppSDK，支持 UE4/UE5 游戏
-- 🏗️ **模块化架构** - 代码清晰，职责分明
-- 🎨 **ImGui UI** - 现代化游戏内菜单
-- 🔧 **易于扩展** - 添加新功能只需修改 3 个文件
+> [!CAUTION]
+> **免责声明**  
+> 本项目仅供安全研究与学习使用。请勿将本项目用于在线或多人游戏的作弊、入侵或其他违法活动。作者对任何滥用行为导致的后果不承担责任。
+> 
+> **反作弊兼容性说明**  
+> 本框架不保证在带有反作弊保护的游戏中的兼容性。对于受 EAC、BattlEye、VAC 等反作弊系统保护的游戏，可能需要额外的分析和优化才能使用。使用者需自行承担因使用本框架导致的所有风险，包括但不限于账号封禁等后果。
 
-## 📁 项目结构（简要）
+> [!NOTE]
+> **版本兼容性说明**  
+> - 支持 Windows 10/11 x64 系统
+> - 需要 DirectX 12 兼容的 GPU
+> - 支持 UE4/UE5 游戏（基于 DUMPER-7 生成的 CppSDK）
+
+---
+
+## 特性
+
+| 功能 | 说明 |
+|:-----|:-----|
+| **通用 D3D12 Hook** | 适用于所有 D3D12 游戏 |
+| **UE 游戏支持** | 使用 DUMPER-7 生成的 CppSDK，支持 UE4/UE5 游戏 |
+| **模块化架构** | 代码清晰，职责分明 |
+| **ImGui 界面** | 现代化游戏内菜单 |
+| **易于扩展** | 添加新功能只需修改 3 个文件 |
+| **性能优化** | 高效的 Hook 实现，最小化性能影响 |
+
+---
+
+## 快速开始
+
+### 先决条件
+
+- Windows 10 / Windows 11 x64
+- Visual Studio 2022（v143 工具集）
+- Windows SDK（最新版）
+- 支持 DirectX 12 的 GPU
+
+### 编译
+
+#### 方式 1：使用批处理脚本（推荐）
+
+```bash
+# 在项目根目录的 Developer Command Prompt for VS 2022 中运行：
+.\build_modular.bat
+# 输出文件将保存在 bin 目录下
+```
+
+> **注意**：
+> - 如果遇到路径问题，请修改 `build_modular.bat` 中的 VS 安装路径
+> - 默认使用 `/MT` 编译选项，如需更改请编辑脚本
+
+#### 方式 2：使用 Visual Studio
+
+1. 打开 `d3d12imgui.sln`
+2. 选择 `Release | x64` 配置
+3. 生成解决方案
+
+> **注意**：
+> - 若在 VS 中手动编译，需手动将 `CppSDK/SDK/*.cpp` 添加到项目中
+> - 推荐使用 `build_modular.bat` 来自动处理依赖
+
+### 使用说明
+
+1. 将生成的 `Etb_Esp.dll` 注入到目标游戏进程
+2. 默认快捷键：
+   - `INSERT` - 显示/隐藏菜单
+   - `F1` - 物品透视
+   - `F2` - 加速功能
+   - `速度倍率` 滑条 - 调整游戏速度 (0.5x ~ 5.0x)
+
+---
+
+## 项目结构
 
 ```
 D3D12-Hook-ImGui/
@@ -37,63 +105,16 @@ D3D12-Hook-ImGui/
 └── main.cpp           # 入口点
 ```
 
-> 架构说明：
+> **架构说明**：
 > - `Hook/` 层是**通用的**，可用于任何 D3D12 游戏
 > - `Core/` 层实现了 UE 游戏特定功能
 > - `CppSDK/` 由 [DUMPER-7](https://github.com/Encryqed/Dumper-7) 生成，包含游戏的类结构
 
-## 🚀 快速开始
+---
 
-### 先决条件
+## 开发指南
 
-- Windows 10 / Windows 11
-- Visual Studio 2022（v143 工具集）和对应的 C++ 工作负载
-- Windows SDK（建议安装最新版本）
-- 具备 DirectX 12 支持的 GPU
-- 推荐使用 Developer Command Prompt for VS 2022 来运行构建脚本
-
-### 编译
-
-方式 1（推荐）：在 Windows 中运行批处理脚本
-
-```
-# 在项目根目录的 Developer Command Prompt for VS 2022 中运行：
-.\build_modular.bat
-# 该脚本会自动配置并编译项目（包含 CppSDK），并输出 DLL（例如 `Etb_Esp.dll`）。
-```
-
-注意：`build_modular.bat` 里包含一些针对本地环境的硬编码项（例如 `vcvars64.bat` 的绝对路径、输出目录 `%OUTDIR%`、以及编译器选项 `/MD` 或 `/MT` 等）。在不同的机器上你通常需要根据本地 Visual Studio 安装路径和偏好修改脚本：
-
-- 确认并修改 `call "D:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"` 为你本机的 vcvars64 路径，或在 Developer Command Prompt 中直接运行脚本以避免路径问题。
-- 如需使用 MSBuild/VCXPROJ 的配置，请考虑将脚本改为调用：
-
-```
-msbuild d3d12imgui.sln /p:Configuration=Release /p:Platform=x64
-```
-
-- 注意命令行长度限制与编译并行性：脚本中以单条 `cl.exe` 编译大量源文件时可能遇到长度限制或速度问题，使用 `msbuild` 可更可靠并且使用项目文件中的设置（例如 CRT 选择 `/MT` vs `/MD`）。
-
-
-方式 2：使用 Visual Studio 手动编译
-
-```
-# 打开 d3d12imgui.sln
-# 选择 Release x64 配置
-# 生成解决方案
-```
-
-注意：VS 解决方案未直接包含所有 `CppSDK/SDK/*.cpp` 文件（头文件过多可能影响编辑器性能）。若在 VS 中手动编译，需手动将 `CppSDK/SDK/*.cpp` 添加到项目中，或优先使用 `build_modular.bat`。
-
-### 使用
-
-1. 将生成的 `Etb_Esp.dll`（示例名）注入到目标游戏进程（注：注入与作弊行为存在法律/账号风险，请谨慎）。
-2. 按 `INSERT` 键打开/关闭菜单
-3. 快捷键示例：
-   - `F1` - 物品透视
-   - `F2` - 加速功能
-   - `速度倍率` 滑条 - 调整 `APawn + 0x98 (CustomTimeDilation)`，通常支持 0.5x ~ 5.0x（视游戏与引擎版本有效性而定）
-
-## 🔧 添加新功能
+### 添加新功能
 
 只需修改 3 个文件：
 
