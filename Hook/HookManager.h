@@ -3,6 +3,10 @@
 #include "VmtHook.h"
 
 namespace Hook {
+    // ⚠️ Hook 管理器 - VMT Hook 技术
+    // 警告：本管理器使用 VMT Hook 技术而非 Inline Hook
+    // 对在线多人游戏的兼容性可能有限，如出现崩溃需自行调整
+    
     // Hook 管理器（单例）
     class HookManager {
     public:

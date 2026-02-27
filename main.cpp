@@ -2,6 +2,12 @@
 // Etb ESP - D3D12 //
 /////////////////////
 
+// ⚠️ 重要提示：Hook 技术兼容性说明
+// 本框架采用 VMT Hook（虚函数表 Hook）技术而非 Inline Hook
+// 对于在线多人游戏（网游）的兼容性可能有限
+// 如果注入后出现崩溃现象，需要自行进行针对性调整和测试
+// 建议在隔离的测试环境中先行验证，确保游戏稳定性
+
 #include "main.h"
 #include "Core/Config.h"
 #include "Core/GameData.h"

@@ -4,6 +4,12 @@
 #include <dxgi1_4.h>
 #include <cstdint>
 
+// ⚠️ Hook 技术兼容性说明
+// 本框架使用 VMT Hook（虚函数表 Hook）技术
+// 采用虚函数表 Hook 而非 Inline Hook，对网游兼容性可能有限
+// 如果在目标游戏中注入后直接崩溃，需要自行进行针对性调整
+// 强烈建议在隔离环境中测试
+
 #if defined _M_X64
 typedef uint64_t uintx_t;
 #elif defined _M_IX86

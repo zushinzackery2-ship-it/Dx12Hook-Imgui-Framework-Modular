@@ -3,6 +3,12 @@
 #include <cstdint>
 
 namespace Hook {
+    // ⚠️ VMT Hook 技术兼容性说明
+    // 本框架采用 VMT Hook（虚函数表 Hook）技术而非 Inline Hook
+    // 对于在线多人游戏（网游）的兼容性可能有限
+    // 如果注入后出现崩溃，需要根据具体游戏进行调整
+    // 建议在隔离的测试环境中先行验证
+    
     // VMT Hook 管理类
     class VmtHook {
     public:
