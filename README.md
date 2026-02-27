@@ -2,11 +2,11 @@
 
 # D3D12 Game Hook Framework
 
-**通用 D3D12 Hook 框架 + UE 游戏功能实现**
+**通用 D3D12 Hook + ImGui Overlay 框架**
 
-*跨游戏兼容 | 模块化设计 | 支持 UE4/UE5*
+*跨游戏兼容 | 模块化设计 | 生产级健壮性*
 
-![C++](https://img.shields.io/badge/C%2B%2B-17-blue?style=flat-square)
+![C++](https://img.shields.io/badge/C%2B%2B-20-blue?style=flat-square)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20x64-lightgrey?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
@@ -28,7 +28,7 @@
 > **版本兼容性说明**  
 > - 支持 Windows 10/11 x64 系统
 > - 需要 DirectX 12 兼容的 GPU
-> - 支持 UE4/UE5 游戏（基于 DUMPER-7 生成的 CppSDK）
+> - 附带 UE4/UE5 游戏示例（基于 DUMPER-7 生成的 CppSDK）
 
 ---
 
@@ -36,12 +36,16 @@
 
 | 功能 | 说明 |
 |:-----|:-----|
-| **通用 D3D12 Hook** | 适用于大部分 D3D12 游戏 |
-| **UE 游戏支持** | 使用 DUMPER-7 生成的 CppSDK，支持 UE4/UE5 游戏 |
-| **模块化架构** | 代码清晰，职责分明 |
-| **ImGui 界面** | 现代化游戏内菜单 |
-| **易于扩展** | 添加新功能只需修改 3 个文件 |
-| **性能优化** | 高效的 Hook 实现，最小化性能影响 |
+| **通用 D3D12 Hook** | 适用于任何 D3D12 游戏，不绑定特定引擎 |
+| **模块化 DX12Renderer** | Hook 回调、资源管理、ImGui 渲染完全封装，外部只需注册 3 个回调 |
+| **Fence GPU 同步** | 每帧等待 GPU 完成再 Reset CommandAllocator，避免资源冲突 |
+| **线程安全** | CRITICAL_SECTION 序列化渲染、SRWLOCK 非阻塞保护 ImGui 输入 |
+| **SEH 异常保护** | 所有 hook 入口和 GPU 操作均有 `__try/__except` 包裹，崩溃不扩散 |
+| **Device Lost 检测与恢复** | 检测 `DXGI_ERROR_DEVICE_REMOVED`，自动标记并允许重新初始化 |
+| **两阶段 CommandQueue 捕获** | Execute 写 pendingQueue，Present 原子消费，渲染期间指针稳定 |
+| **SwapChain 热切换** | 全屏/窗口切换时自动重建资源，无需重新注入 |
+| **ResizeBuffers / ResizeBuffers1** | 同时 hook 两者，覆盖 HDR/格式切换场景 |
+| **安全卸载** | 等待 in-flight Present → unhook → 恢复 WndProc → 销毁 ImGui → 释放资源 |
 
 ---
 
@@ -56,127 +60,179 @@
 
 ### 编译
 
-#### 方式 1：使用批处理脚本（推荐）
+#### 完整版（含 UE 游戏功能）
 
-```bash
-# 在项目根目录的 Developer Command Prompt for VS 2022 中运行：
+```powershell
 .\build_modular.bat
-# 输出文件将保存在 bin 目录下
+# 输出: x64\Release\Etb_Esp.dll
 ```
 
-> **注意**：
-> - 如果遇到路径问题，请修改 `build_modular.bat` 中的 VS 安装路径
-> - 默认使用 `/MT` 编译选项，如需更改请编辑脚本
+#### 纯测试版（无功能通用空白 ImGui 窗口，验证 Hook 是否工作）
 
-#### 方式 2：使用 Visual Studio
+```powershell
+.\build_test.bat
+# 输出: x64\Release\DX12HookTest.dll
+```
+
+#### 使用 Visual Studio
 
 1. 打开 `d3d12imgui.sln`
 2. 选择 `Release | x64` 配置
 3. 生成解决方案
 
-> **注意**：
-> - 若在 VS 中手动编译，需手动将 `CppSDK/SDK/*.cpp` 添加到项目中
-> - 推荐使用 `build_modular.bat` 来自动处理依赖
+> **注意**：若在 VS 中手动编译，需手动将 `CppSDK/SDK/*.cpp` 添加到项目中。推荐使用 bat 脚本。
 
 ### 使用说明
 
-1. 将生成的 `Etb_Esp.dll` 注入到目标游戏进程
-2. 默认快捷键：
-   - `INSERT` - 显示/隐藏菜单
-   - `F1` - 物品透视
-   - `F2` - 加速功能
-   - `速度倍率` 滑条 - 调整游戏速度 (0.5x ~ 5.0x)
+**测试版 (`DX12HookTest.dll`)**：注入任意 DX12 游戏
+- `INSERT` — 显示/隐藏 ImGui 窗口
+- `END` — 卸载 DLL
+
+**完整版 (`Etb_Esp.dll`)**：注入目标 UE 游戏
+- `INSERT` — 显示/隐藏菜单
+- `F1` — 物品透视
+- `F2` — 加速功能
 
 ---
 
-## 项目结构
+## 架构
 
 ```
-D3D12-Hook-ImGui/
-├── Hook/              # Hook 模块 (通用 D3D12)
-│   ├── VmtHook.cpp    # VMT 钩子实现
-│   ├── D3D12Hook.cpp  # D3D12 初始化
-│   └── HookManager.cpp # Hook 统一管理
-├── Core/              # 核心模块 (UE 游戏功能)
-│   ├── Config.h       # 配置管理
-│   ├── GameData.cpp   # 游戏数据收集
-│   └── GameMemory.h   # 内存读写
-├── UI/                # 界面模块
-│   └── Renderer.cpp   # ImGui 渲染
-├── ImGui/             # ImGui 库
-├── CppSDK/            # UE SDK (DUMPER-7 生成)
-└── main.cpp           # 入口点
+项目根目录/
+├── Core/
+│   ├── DX12/                      # DX12 渲染管理（核心层）
+│   │   ├── DX12Renderer.h         #   公开接口：回调注册、InstallHooks、Shutdown
+│   │   ├── DX12Renderer.cpp       #   资源生命周期、ImGui 初始化、VMT Patch、安全调用
+│   │   ├── DX12Internal.h         #   内部共享状态（两个 cpp 共用）
+│   │   └── DX12HookCallbacks.cpp  #   Hook 回调：OnPresent、OnResize、OnExecute、WndProc
+│   ├── Config.h                   # 功能开关配置
+│   ├── GameData.cpp/h             # UE 游戏数据收集
+│   └── GameMemory.h               # 内存读写工具
+├── Hook/                          # 通用 Hook 基础设施
+│   ├── D3D12Hook.cpp/h            #   创建临时设备提取 vtable 地址
+│   ├── VmtHook.cpp/h              #   VMT 修补实现
+│   └── HookManager.cpp/h          #   统一 Hook 管理（安装/卸载）
+├── UI/                            # 界面模块
+│   └── Renderer.cpp               #   ImGui 菜单渲染
+├── ImGui/                         # ImGui 库（含 DX12 + Win32 后端）
+├── CppSDK/                        # UE SDK（DUMPER-7 生成）
+├── main.cpp                       # 完整版入口（UE 游戏）
+├── main_test.cpp                  # 测试版入口（空白 ImGui）
+├── build_modular.bat              # 完整版编译脚本
+└── build_test.bat                 # 测试版编译脚本
 ```
 
-> **架构说明**：
-> - `Hook/` 层是**通用的**，可用于任何 D3D12 游戏
-> - `Core/` 层实现了 UE 游戏特定功能
-> - `CppSDK/` 由 [DUMPER-7](https://github.com/Encryqed/Dumper-7) 生成，包含游戏的类结构
+### 层级关系
+
+```
+外部代码（main.cpp / main_test.cpp）
+    │  注册 3 个回调 + 调用 InstallHooks / Shutdown
+    ▼
+Core::DX12Renderer（公开接口）
+    │  管理 DX12 资源、ImGui 生命周期
+    ▼
+Core::DX12Internal（内部实现）
+    │  Hook 回调、WndProc、渲染帧、线程同步
+    ▼
+Hook::HookManager → Hook::VmtHook
+    │  VMT 修补、vtable 提取
+    ▼
+DirectX 12 / DXGI / ImGui
+```
+
+### 健壮性设计
+
+| 机制 | 实现 |
+|:-----|:-----|
+| **GPU 同步** | 每帧 Fence wait（500ms 超时），资源释放前 Signal+Wait（5000ms） |
+| **渲染序列化** | `CRITICAL_SECTION` 防止并发 Present/Resize 竞态 |
+| **ImGui 线程安全** | `SRWLOCK`（`TryAcquire` 非阻塞），WndProc 不卡消息泵 |
+| **异常保护** | 所有 hook 入口、GPU 操作、ImGui 调用均有 SEH 包裹 |
+| **防递归** | `ResolveExecuteCommandListsFn` 从 vtable 解析真实函数，避免 hook 调回自己 |
+| **两阶段队列** | Execute→`g_pendingQueue`（AddRef），Present 原子消费→`g_cmdQueue` |
+| **Device Lost** | 检测 `DEVICE_REMOVED/RESET`，标记 `g_deviceLost`，下次 Present 自动恢复 |
+| **安全卸载** | `g_unloading` + `g_suspendRendering` + 等待 `presentInFlight` 归零 |
+| **WndProc 安全** | 重复 hook 检测 + `IsWindow` 验证 + Unicode API |
+| **cmdList 录制状态追踪** | `g_cmdListRecording` 标志，异常时安全 Close |
 
 ---
 
 ## 开发指南
 
-### 添加新功能
-
-只需修改 3 个文件：
+### 最小接入（不依赖 UE）
 
 ```cpp
-// 1. Core/Config.h - 添加配置
+#include "Core/DX12/DX12Renderer.h"
+
+auto& renderer = Core::DX12Renderer::Instance();
+renderer.SetRenderCallback([](float w, float h)
+{
+    ImGui::Begin("My Overlay");
+    ImGui::Text("Hello DX12!");
+    ImGui::End();
+});
+renderer.SetMenuVisibleCallback([]() { return showMenu; });
+renderer.SetImGuiInitCallback([]() { /* 加载字体 */ });
+renderer.InstallHooks();
+
+// 卸载时
+renderer.Shutdown();
+```
+
+### 添加 UE 游戏功能
+
+修改 3 个文件：
+
+```cpp
+// 1. Core/Config.h — 添加开关
 namespace Features {
     inline bool NewFeature_Enabled = false;
 }
 
-// 2. Core/GameData.cpp - 添加逻辑
+// 2. Core/GameData.cpp — 添加数据采集逻辑
 void DataCollector::CollectData() {
-    if (Config::Features::NewFeature_Enabled) {
-        // 你的逻辑
-    }
+    if (Config::Features::NewFeature_Enabled) { /* ... */ }
 }
 
-// 3. UI/Renderer.cpp - 添加 UI
+// 3. UI/Renderer.cpp — 添加 UI 控件
 void Renderer::RenderMenu() {
     ImGui::Checkbox("新功能", &Config::Features::NewFeature_Enabled);
 }
 ```
 
-## 📋 系统要求
-
-- Windows 10/11
-- Visual Studio 2022 (v143)
-- DirectX 12 支持
-- 目标游戏：Unreal Engine 4/5 (D3D12)
-
-## 🔄 适配其他游戏
-
 ### 适配其他 D3D12 游戏
-Hook 层无需修改，只需：
-1. 使用 [DUMPER-7](https://github.com/Encryqed/Dumper-7) 为目标游戏生成新的 CppSDK
+
+`Core/DX12/` 和 `Hook/` 层完全通用，无需修改。只需：
+
+1. 用 [DUMPER-7](https://github.com/Encryqed/Dumper-7) 为目标游戏生成新的 CppSDK
 2. 替换 `CppSDK/` 文件夹
 3. 更新 `Core/Config.h` 中的偏移地址
 4. 修改 `Core/GameData.cpp` 中的游戏逻辑
 
-### 适配其他渲染 API
-- **D3D11**: 修改 `Hook/D3D12Hook.cpp` → `D3D11Hook.cpp`
-- **D3D9/OpenGL**: 需重写 Hook 模块
+---
 
-## 📝 技术栈
+## 技术栈
 
 | 组件 | 技术 |
-|------|------|
-| Hook 技术 | VMT Hook (通用) |
-| 渲染 API | DirectX 12 |
-| UI 框架 | ImGui |
-| 游戏引擎 | Unreal Engine 4/5 |
-| SDK 生成 | DUMPER-7 |
-| 编译器 | MSVC (C++20) |
-| 架构 | 模块化设计 |
+|:-----|:-----|
+| Hook 技术 | VMT Hook（VirtualProtect 修补） |
+| 渲染 API | DirectX 12 + DXGI 1.4 |
+| UI 框架 | ImGui（DX12 + Win32 后端） |
+| 线程同步 | CRITICAL_SECTION + SRWLOCK |
+| 异常保护 | SEH（`__try/__except`） |
+| GPU 同步 | ID3D12Fence + Event |
+| 编译器 | MSVC C++20 / MT 静态链接 |
+| 构建 | bat 脚本 / Visual Studio 2022 |
 
-## 常见故障排查（快速）
+## 常见故障排查
 
-- 找不到头文件或编译错误：请确认已安装 C++ 工作负载与 Windows SDK，并在 Developer Command Prompt 中运行 `build_modular.bat`。
-- 链接错误：检查是否缺少 `CppSDK/SDK/*.cpp` 被添加到构建中（脚本通常会处理，手动编译时需留意）。
-- 注入失败或被杀进程：某些安全软件或游戏反作弊会阻止注入，需在受控环境中测试。
+| 问题 | 解决方案 |
+|:-----|:---------|
+| 找不到头文件 / 编译错误 | 确认已安装 C++ 工作负载与 Windows SDK，使用 bat 脚本编译 |
+| 链接错误 | 检查 `CppSDK/SDK/*.cpp` 是否被添加到构建中（bat 脚本自动处理） |
+| 注入后无反应 | 先用 `DX12HookTest.dll` 测试 Hook 是否正常工作 |
+| 注入崩溃 | 检查目标游戏是否使用 D3D12，反作弊可能阻止 VMT 修改 |
+| 全屏切换后 overlay 消失 | 正常行为，框架会自动检测 SwapChain 变化并重建资源 |
 
 ## ⚠️ 免责声明
 
@@ -184,7 +240,8 @@ Hook 层无需修改，只需：
 
 ## 贡献与许可证
 
-- 本项目采用 MIT 许可证（见 `LICENSE`）。欢迎提交 issue 或 PR，但请确保用途合规。
+本项目采用 MIT 许可证（见 `LICENSE`）。欢迎提交 issue 或 PR，但请确保用途合规。
 
 ---
-更新时间：2025-12-19
+
+更新时间：2026-02-28

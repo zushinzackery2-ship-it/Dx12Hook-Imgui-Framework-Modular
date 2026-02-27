@@ -13,8 +13,8 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-echo === Build configuration: Release (Modular) ===
-echo === Compiling Etb_Esp.dll ===
+echo === Build configuration: Release (Test) ===
+echo === Compiling DX12HookTest.dll ===
 
 cl.exe /nologo /W0 /std:c++20 /EHsc /utf-8 /O2 /MT ^
   /D"NDEBUG" /D"_WINDOWS" /D"_USRDLL" /D"UNICODE" /D"_UNICODE" ^
@@ -22,19 +22,14 @@ cl.exe /nologo /W0 /std:c++20 /EHsc /utf-8 /O2 /MT ^
   /I "%ROOT%\Core" ^
   /I "%ROOT%\Core\DX12" ^
   /I "%ROOT%\Hook" ^
-  /I "%ROOT%\UI" ^
   /I "%ROOT%\ImGui" ^
-  /I "%ROOT%\CppSDK" ^
-  /I "%ROOT%\CppSDK\SDK" ^
   /Fo"%OUTDIR%\\" ^
-  "%ROOT%\main.cpp" ^
+  "%ROOT%\main_test.cpp" ^
   "%ROOT%\Hook\D3D12Hook.cpp" ^
   "%ROOT%\Hook\VmtHook.cpp" ^
   "%ROOT%\Hook\HookManager.cpp" ^
   "%ROOT%\Core\DX12\DX12Renderer.cpp" ^
   "%ROOT%\Core\DX12\DX12HookCallbacks.cpp" ^
-  "%ROOT%\Core\GameData.cpp" ^
-  "%ROOT%\UI\Renderer.cpp" ^
   "%ROOT%\ImGui\imgui.cpp" ^
   "%ROOT%\ImGui\imgui_demo.cpp" ^
   "%ROOT%\ImGui\imgui_draw.cpp" ^
@@ -42,17 +37,14 @@ cl.exe /nologo /W0 /std:c++20 /EHsc /utf-8 /O2 /MT ^
   "%ROOT%\ImGui\imgui_widgets.cpp" ^
   "%ROOT%\ImGui\imgui_impl_dx12.cpp" ^
   "%ROOT%\ImGui\imgui_impl_win32.cpp" ^
-  "%ROOT%\CppSDK\SDK\Basic.cpp" ^
-  "%ROOT%\CppSDK\SDK\CoreUObject_functions.cpp" ^
-  "%ROOT%\CppSDK\SDK\Engine_functions.cpp" ^
   /link /DLL /SUBSYSTEM:WINDOWS ^
-  user32.lib kernel32.lib gdi32.lib d3d12.lib dxgi.lib Advapi32.lib psapi.lib ^
-  /OUT:"%OUTDIR%\Etb_Esp.dll"
+  user32.lib kernel32.lib gdi32.lib d3d12.lib dxgi.lib Advapi32.lib ^
+  /OUT:"%OUTDIR%\DX12HookTest.dll"
 
 set ERR=%ERRORLEVEL%
 echo.
 echo === Build finished with exit code: %ERR% ===
 if %ERR% EQU 0 (
-    echo === DLL location: %OUTDIR%\Etb_Esp.dll ===
+    echo === DLL location: %OUTDIR%\DX12HookTest.dll ===
 )
 exit /b %ERR%

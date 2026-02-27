@@ -156,6 +156,8 @@
     <ClCompile Include="Hook\VmtHook.cpp" />
     <ClCompile Include="Hook\HookManager.cpp" />
     <ClCompile Include="Core\GameData.cpp" />
+    <ClCompile Include="Core\DX12\DX12Renderer.cpp" />
+    <ClCompile Include="Core\DX12\DX12HookCallbacks.cpp" />
     <ClCompile Include="UI\Renderer.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
@@ -175,6 +177,8 @@
     <ClInclude Include="Hook\HookManager.h" />
     <ClInclude Include="Core\Config.h" />
     <ClInclude Include="Core\GameData.h" />
+    <ClInclude Include="Core\DX12\DX12Renderer.h" />
+    <ClInclude Include="Core\DX12\DX12Internal.h" />
     <ClInclude Include="Core\GameMemory.h" />
     <ClInclude Include="UI\Renderer.h" />
     <ClInclude Include="ImGui\imconfig.h" />
